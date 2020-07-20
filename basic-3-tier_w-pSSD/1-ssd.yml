@@ -1,0 +1,10 @@
+# Item 1
+# This file adds a persistent SSD storage class for use in GKE
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd

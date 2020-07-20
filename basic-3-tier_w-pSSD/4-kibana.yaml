@@ -1,0 +1,31 @@
+# Item 4
+# This creates a Kibana instance
+#    replace metadata: name/namespace, and memory limits as appropriate
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: c1             # add your deployment name here
+  namespace: eck       # add a namespace here
+spec:
+  version: 7.8.0
+  count: 2
+  elasticsearchRef:
+    name: c1           # the matadata: used in the elastic.yml
+  # Enable GKE loadbalancing to externally expost Kibana endpoint
+  http:
+    service:
+      spec:
+        type: LoadBalancer
+  podTemplate:
+    metadata:
+    spec:
+      containers:
+      - name: kibana
+        resources:
+          limits:
+            memory: 2Gi   # Per pod memory limit in K8s
+            cpu: 2        # Per pod CPU Limit in K8s  
+        env:              # Kibana Java Mem Settings
+          - name: ES_JAVA_OPTS
+            value: -Xms2g -Xmx2g

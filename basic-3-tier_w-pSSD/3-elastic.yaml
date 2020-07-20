@@ -1,0 +1,226 @@
+# Item 3
+# This creates an Elastic Cluster
+#    replace metadata: name/namespace, and memory limits as appropriate
+# This install has:
+#    3x 4gb Master Nodes
+#    3x 4gb Ingest Nodes
+#    3x 64gb Hot Data Nodes (30gb xms, 2TB SSD Disk)
+#    2x 64gb Warm Data Nodes (30gb xms, 8TB SSD Disk)
+#    1x 64gb Cold Data Nodes (30gb xms, 10TB SSD Disk)
+#    3x 16gb ML Nodes
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: c1             # add your deployment name here
+  namespace: eck       # add a namespace here
+spec:
+  version: 7.8.0
+  nodeSets:
+  - name: master
+    count: 3
+    config:
+      node.master: true
+      node.data: false
+      node.ingest: false
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms4g -Xmx4g
+          resources:
+            requests:
+              memory: 4Gi
+              cpu: 2
+            limits:
+              memory: 4Gi
+              cpu: 4
+  - name: ingest
+    count: 3
+    config:
+      node.master: false
+      node.data: false
+      node.ingest: true
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms4g -Xmx4g
+          resources:
+            requests:
+              memory: 4Gi
+              cpu: 2
+            limits:
+              memory: 4Gi
+              cpu: 4
+  - name: ml
+    count: 3
+    config:
+      node.master: false
+      node.data: false
+      node.ingest: true
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms16g -Xmx16g
+          resources:
+            requests:
+              memory: 16Gi
+              cpu: 8
+            limits:
+              memory: 16Gi
+              cpu: 12
+  - name: hot
+    count: 3
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+      node.store.allow_mmap: false
+      node.attr.data: hot
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 2000Gi
+        storageClassName: ssd
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms30g -Xmx30g
+          resources:
+            requests:
+              memory: 64Gi
+              cpu: 8
+            limits:
+              memory: 64Gi
+              cpu: 12
+  - name: warm
+    count: 2
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+      node.attr.data: warm
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8000Gi
+        storageClassName: ssd
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms30g -Xmx30g
+          resources:
+            requests:
+              memory: 64Gi
+              cpu: 8
+            limits:
+              memory: 64Gi
+              cpu: 12
+  - name: cold
+    count: 1
+    config:
+      node.master: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      xpack.ml.enabled: true
+      cluster.remote.connect: true
+      node.attr.data: cold
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10000Gi
+        storageClassName: ssd
+    podTemplate:
+      spec:
+        initContainers:
+        - name: sysctl
+          securityContext:
+            privileged: true
+          command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms30g -Xmx30g
+          resources:
+            requests:
+              memory: 64Gi
+              cpu: 8
+            limits:
+              memory: 64Gi
+              cpu: 12
+  # Enable GKE loadbalcing to externally expost Elastic endpoints
+  http:
+    service:
+      spec:
+        type: LoadBalancer
