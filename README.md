@@ -8,11 +8,11 @@ I will also add a command line gcloud config for building a cluster.
  -  1: Elastic Trial license (optional)
   - 2: SSD Persistent Storage Class
   - 3: Elastic Cluster
-   - 3x Master Nodes
-   - 3x Ingest Nodes
-   - 3x Hot Data
-   - 2x Warm Data
-   - 1x Cold Data
+    - 3x Master Nodes
+    - 3x Ingest Nodes
+    - 3x Hot Data
+    - 2x Warm Data
+    - 1x Cold Data
   - 4: Kibana
 
    
